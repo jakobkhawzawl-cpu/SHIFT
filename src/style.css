@@ -24,3 +24,7 @@ body{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .desktop-controls,.keyboard-help,.kbd,.key-hint,[class*="keyboard"],[class*="desktop"]{display:none!important}
   button{-webkit-tap-highlight-color:transparent}
 }
+
+.look-zone{position:absolute;inset:0 0 155px 35%;z-index:1;pointer-events:auto;touch-action:none}
+.crosshair{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px;border:1px solid #ffffff66;border-radius:50%;color:#d9e8ff;font:700 17px/20px Inter;text-align:center;text-shadow:0 0 12px #6deaff;pointer-events:none;opacity:.75}
+@media(max-width:560px){.look-zone{inset:0 0 145px 32%}.crosshair{width:20px;height:20px;font-size:14px;line-height:16px}}
