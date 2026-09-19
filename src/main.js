@@ -13,6 +13,8 @@ app.innerHTML=`
 <button class="style" data-style="SHIFT RUNNER"><b>03 // SHIFT RUNNER</b><span>Speed / Dual blades</span></button>
 <button class="style" data-style="ENERGY WARRIOR"><b>04 // ENERGY WARRIOR</b><span>Power / Plasma staff</span></button></div><button id="enter" class="cta full">ENTER 3D ARENA <span>→</span></button></div><div class="preview"><div class="label">REAL 3D CHARACTER // <b id="styleLabel">NEON CYBER</b></div><div id="forge3d"></div><div class="hint">DRAG TO ROTATE</div></div></div></section>
 <section id="game" class="screen"><div id="game3d"></div><div class="hud"><div class="identity"><div id="hudPhoto"></div><div><b id="hudName">PLAYER</b><span id="hudStyle">NEON CYBER</span></div></div><div class="bar"><span>VITALS</span><i><b id="hp"></b></i></div><div class="score"><span>SECTOR 07</span><b id="score">0000</b></div></div><div class="controls"><span>WASD / ARROWS MOVE</span><span>SPACE ATTACK</span><span>SHIFT DASH</span></div><div class="mobile-game-controls">
+  <div class="look-zone" id="lookZone"></div>
+  <div class="crosshair" id="crosshair">+</div>
   <div class="virtual-joystick" id="joystick"><div class="joystick-base"><div class="joystick-stick"></div></div></div>
   <div class="action-buttons">
     <button class="action-btn shoot" data-action="shoot"><span>◉</span><small>SHOOT</small></button>
@@ -132,6 +134,17 @@ function startGame(){
  const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
  document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash()};});
  const joystick=$('joystick'),stick=joystick?.querySelector('.joystick-stick');let joyPointer=null;
+ let cameraYaw=0,cameraPitch=.16,lookPointer=null,lastLookX=0,lastLookY=0;
+ const lookZone=$('lookZone');
+ const applyLook=(e)=>{
+   const dx=e.clientX-lastLookX,dy=e.clientY-lastLookY; lastLookX=e.clientX;lastLookY=e.clientY;
+   cameraYaw-=dx*.008;cameraPitch=THREE.MathUtils.clamp(cameraPitch-dy*.006,-.12,.55);
+   if(player)player.rotation.y=cameraYaw;
+ };
+ lookZone?.addEventListener('pointerdown',e=>{lookPointer=e.pointerId;lastLookX=e.clientX;lastLookY=e.clientY;lookZone.setPointerCapture(e.pointerId)});
+ lookZone?.addEventListener('pointermove',e=>{if(e.pointerId===lookPointer)applyLook(e)});
+ const resetLook=()=>{lookPointer=null};
+ lookZone?.addEventListener('pointerup',resetLook);lookZone?.addEventListener('pointercancel',resetLook);
  const updateJoystick=e=>{const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let x=e.clientX-cx,y=e.clientY-cy;const max=r.width*.32;const d=Math.hypot(x,y);if(d>max){x=x/d*max;y=y/d*max}stick.style.transform=`translate(${x}px,${y}px)`;keys.a=x<-max*.22;keys.d=x>max*.22;keys.w=y<-max*.22;keys.s=y>max*.22};
  joystick?.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);updateJoystick(e)});
  joystick?.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)updateJoystick(e)});
@@ -140,12 +153,22 @@ function startGame(){
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
  game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
  const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
- if(player&&(mx||mz)){const v=new THREE.Vector3(mx,0,mz).normalize();player.position.addScaledVector(v,cfg[style].speed*dt);player.rotation.y=Math.atan2(v.x,v.z)}
+ if(player&&(mx||mz)){
+   const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
+   const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
+   const v=forward.clone().multiplyScalar(mz).add(right.multiplyScalar(mx));
+   if(v.lengthSq()>0){v.normalize();player.position.addScaledVector(v,cfg[style].speed*dt)}
+ }
  if(player){player.position.x=THREE.MathUtils.clamp(player.position.x,-18,18);player.position.z=THREE.MathUtils.clamp(player.position.z,-18,18)}
  attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);shootCd=Math.max(0,shootCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
  enemies.forEach(e=>{if(!player)return;const v=player.position.clone().sub(e.o.position);v.y=0;const d=v.length();if(d>1.55){v.normalize();e.o.position.addScaledVector(v,(1.05+score/2400)*dt)}else hp-=9*dt});
  $('hp').style.width=Math.max(0,hp)+'%';if(enemies.length===0)for(let i=0;i<4;i++)addEnemy();
- if(player){camera.position.lerp(player.position.clone().add(new THREE.Vector3(0,3.1,6.8)),.08);camera.lookAt(player.position.x,1.1,player.position.z)}
+ if(player){
+   const target=player.position.clone().add(new THREE.Vector3(0,1.25,0));
+   const distance=6.8,cy=Math.cos(cameraPitch),sy=Math.sin(cameraPitch);
+   const offset=new THREE.Vector3(Math.sin(cameraYaw)*distance*cy,1.4+distance*sy,Math.cos(cameraYaw)*distance*cy);
+   camera.position.lerp(target.clone().add(offset),.12);camera.lookAt(target);
+ }
  renderer.render(scene,camera);if(hp<=0)return finish(false);if(score>=1200)return finish(true);requestAnimationFrame(loop)};
  requestAnimationFrame(loop);
  function finish(win){running=false;game.running=false;$('resultTitle').textContent=win?'SECTOR CLEARED':'FIGHTER DOWN';$('resultText').textContent=win?'Score '+score+'. Sector 07 is secure.':'Score '+score+'. Re-enter the arena and try again.';$('result').classList.remove('hidden')}
