@@ -12,7 +12,14 @@ app.innerHTML=`
 <button class="style" data-style="HEAVY GUARDIAN"><b>02 // HEAVY GUARDIAN</b><span>Heavy armor / Shock hammer</span></button>
 <button class="style" data-style="SHIFT RUNNER"><b>03 // SHIFT RUNNER</b><span>Speed / Dual blades</span></button>
 <button class="style" data-style="ENERGY WARRIOR"><b>04 // ENERGY WARRIOR</b><span>Power / Plasma staff</span></button></div><button id="enter" class="cta full">ENTER 3D ARENA <span>→</span></button></div><div class="preview"><div class="label">REAL 3D CHARACTER // <b id="styleLabel">NEON CYBER</b></div><div id="forge3d"></div><div class="hint">DRAG TO ROTATE</div></div></div></section>
-<section id="game" class="screen"><div id="game3d"></div><div class="hud"><div class="identity"><div id="hudPhoto"></div><div><b id="hudName">PLAYER</b><span id="hudStyle">NEON CYBER</span></div></div><div class="bar"><span>VITALS</span><i><b id="hp"></b></i></div><div class="score"><span>SECTOR 07</span><b id="score">0000</b></div></div><div class="controls"><span>WASD / ARROWS MOVE</span><span>SPACE ATTACK</span><span>SHIFT DASH</span></div><div class="touch"><button data-k="up">▲</button><div><button data-k="left">◀</button><button data-k="attack">●</button><button data-k="right">▶</button></div><button data-k="down">▼</button></div><div id="result" class="result hidden"><small>COMBAT REPORT</small><h2 id="resultTitle">SECTOR CLEAR</h2><p id="resultText"></p><button id="again" class="cta">PLAY AGAIN</button><button id="back" class="small">MAIN MENU</button></div></section>
+<section id="game" class="screen"><div id="game3d"></div><div class="hud"><div class="identity"><div id="hudPhoto"></div><div><b id="hudName">PLAYER</b><span id="hudStyle">NEON CYBER</span></div></div><div class="bar"><span>VITALS</span><i><b id="hp"></b></i></div><div class="score"><span>SECTOR 07</span><b id="score">0000</b></div></div><div class="controls"><span>WASD / ARROWS MOVE</span><span>SPACE ATTACK</span><span>SHIFT DASH</span></div><div class="mobile-game-controls">
+  <div class="virtual-joystick" id="joystick"><div class="joystick-base"><div class="joystick-stick"></div></div></div>
+  <div class="action-buttons">
+    <button class="action-btn shoot" data-action="shoot"><span>◉</span><small>SHOOT</small></button>
+    <button class="action-btn attack" data-action="attack"><span>✦</span><small>ATTACK</small></button>
+    <button class="action-btn dash" data-action="dash"><span>»</span><small>DASH</small></button>
+  </div>
+</div><div id="result" class="result hidden"><small>COMBAT REPORT</small><h2 id="resultTitle">SECTOR CLEAR</h2><p id="resultText"></p><button id="again" class="cta">PLAY AGAIN</button><button id="back" class="small">MAIN MENU</button></div></section>
 </div>`;
 
 const $=id=>document.getElementById(id);
@@ -106,20 +113,36 @@ function startGame(){
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),mat(0x070b17,.65,.5));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);scene.add(new THREE.GridHelper(80,40,0x27335f,0x111a31));
  for(let i=0;i<28;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.07,Math.random()*5+1,.07),neonPart(cfg[style].glow));p.position.set((Math.random()-.5)*35,.5,(Math.random()-.5)*35);scene.add(p)}
  let player=null,playerData=null;createCharacter().then(h=>{playerData=h;player=h.root;player.position.set(0,0,4);scene.add(player);});
- const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,running=true;const keys={};
+ const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};
  function enemy(){const g=new THREE.Group(),body=mat(0x301326,.7,.3),glow=neonPart(0xff527d);const b=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.85,5,12),body);b.position.y=.9;g.add(b);const h=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),body);h.position.y=1.7;g.add(h);const v=new THREE.Mesh(new THREE.BoxGeometry(.48,.06,.04),glow);v.position.set(0,1.72,.3);g.add(v);return g}
  function addEnemy(){const a=Math.random()*Math.PI*2,d=10+Math.random()*9,e=enemy();e.position.set(Math.cos(a)*d,0,Math.sin(a)*d);scene.add(e);enemies.push({o:e,hp:2})}
  for(let i=0;i<4;i++)addEnemy();
- const attack=()=>{if(!player||attackCd>0)return;attackCd=.5;for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(player.position.distanceTo(e.o.position)<2.5){e.hp--;if(e.hp<=0){score+=100;scene.remove(e.o);enemies.splice(i,1)}}}$('score').textContent=String(score).padStart(4,'0')};
+ const damageEnemy=(e,amount)=>{e.hp-=amount;if(e.hp<=0){score+=100;scene.remove(e.o);const n=enemies.indexOf(e);if(n>=0)enemies.splice(n,1);$('score').textContent=String(score).padStart(4,'0')}};
+ const attack=()=>{if(!player||attackCd>0)return;attackCd=.5;for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(player.position.distanceTo(e.o.position)<2.5)damageEnemy(e,1)}};
+ const shoot=()=>{if(!player||shootCd>0)return;shootCd=.22;
+   const forward=new THREE.Vector3(0,0,-1).applyQuaternion(player.quaternion).normalize();
+   let target=null,best=999;
+   for(const e of enemies){const to=e.o.position.clone().sub(player.position);const d=to.length();if(d>18)continue;to.normalize();const dot=forward.dot(to);if(dot>.82&&d<best){best=d;target=e}}
+   const start=player.position.clone().add(new THREE.Vector3(0,1.45,0)).addScaledVector(forward,.8);
+   const beam=new THREE.Mesh(new THREE.SphereGeometry(.08,8,8),neonPart(cfg[style].glow));beam.position.copy(start);scene.add(beam);
+   const end=target?target.o.position.clone().add(new THREE.Vector3(0,1,0)):start.clone().addScaledVector(forward,18);
+   const life={t:0};const fly=()=>{life.t+=.08;beam.position.lerp(end,.3);if(life.t>=1){scene.remove(beam);if(target&&enemies.includes(target))damageEnemy(target,1);return}requestAnimationFrame(fly)};fly();
+ };
  const dash=()=>{if(!player||dashCd>0)return;dashCd=1;const v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(0,0,-1);v.normalize();player.position.addScaledVector(v,4)};
- const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
- document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k,map={up:'w',down:'s',left:'a',right:'d'};b.onpointerdown=e=>{e.preventDefault();if(k==='attack')attack();else keys[map[k]]=true};b.onpointerup=b.onpointercancel=()=>{if(map[k])keys[map[k]]=false}});
+ const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
+ document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash()};});
+ const joystick=$('joystick'),stick=joystick?.querySelector('.joystick-stick');let joyPointer=null;
+ const updateJoystick=e=>{const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let x=e.clientX-cx,y=e.clientY-cy;const max=r.width*.32;const d=Math.hypot(x,y);if(d>max){x=x/d*max;y=y/d*max}stick.style.transform=`translate(${x}px,${y}px)`;keys.a=x<-max*.22;keys.d=x>max*.22;keys.w=y<-max*.22;keys.s=y>max*.22};
+ joystick?.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);updateJoystick(e)});
+ joystick?.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)updateJoystick(e)});
+ const resetJoystick=()=>{joyPointer=null;if(stick)stick.style.transform='translate(0,0)';keys.a=keys.d=keys.w=keys.s=false};
+ joystick?.addEventListener('pointerup',resetJoystick);joystick?.addEventListener('pointercancel',resetJoystick);
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
  game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
  const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
  if(player&&(mx||mz)){const v=new THREE.Vector3(mx,0,mz).normalize();player.position.addScaledVector(v,cfg[style].speed*dt);player.rotation.y=Math.atan2(v.x,v.z)}
  if(player){player.position.x=THREE.MathUtils.clamp(player.position.x,-18,18);player.position.z=THREE.MathUtils.clamp(player.position.z,-18,18)}
- attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
+ attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);shootCd=Math.max(0,shootCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
  enemies.forEach(e=>{if(!player)return;const v=player.position.clone().sub(e.o.position);v.y=0;const d=v.length();if(d>1.55){v.normalize();e.o.position.addScaledVector(v,(1.05+score/2400)*dt)}else hp-=9*dt});
  $('hp').style.width=Math.max(0,hp)+'%';if(enemies.length===0)for(let i=0;i<4;i++)addEnemy();
  if(player){camera.position.lerp(player.position.clone().add(new THREE.Vector3(0,3.1,6.8)),.08);camera.lookAt(player.position.x,1.1,player.position.z)}
