@@ -11,3 +11,16 @@
 .action-btn span{font:700 23px Orbitron;line-height:1}.action-btn small{font:700 7px Orbitron;letter-spacing:.05em;color:#9da8c8}.action-btn.shoot{width:82px;height:82px;border-color:#6deaff77}.action-btn.shoot span{font-size:30px}.action-btn.attack{transform:translateY(-26px);border-color:#b07dff66}.action-btn.dash{width:58px;height:58px}.action-btn:active{transform:scale(.92)}.action-btn.attack:active{transform:translateY(-26px) scale(.92)}
 @media(max-width:850px){.mobile-game-controls{display:block}.touch{display:none}}
 @media(max-width:560px){.virtual-joystick{left:14px;bottom:18px;width:120px;height:120px}.joystick-stick{width:54px;height:54px;left:33px;top:33px}.action-buttons{right:12px;bottom:17px;gap:7px}.action-btn{width:61px;height:61px}.action-btn.shoot{width:74px;height:74px}.action-btn.attack{transform:translateY(-23px)}.action-btn.attack:active{transform:translateY(-23px) scale(.92)}.action-btn.dash{width:53px;height:53px}.action-btn span{font-size:20px}.action-btn small{font-size:6px}}
+
+/* SHIFT is a mobile-first game. Desktop keyboard UI is intentionally disabled. */
+html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none}
+body{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+@media(min-width:851px){
+  body:before{content:"SHIFT is designed for mobile";position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#050711;color:#eef1ff;font:700 18px Orbitron;letter-spacing:.08em}
+  body>*{display:none!important}
+}
+@media(max-width:850px){
+  .mobile-game-controls{display:block!important}
+  .desktop-controls,.keyboard-help,.kbd,.key-hint,[class*="keyboard"],[class*="desktop"]{display:none!important}
+  button{-webkit-tap-highlight-color:transparent}
+}
