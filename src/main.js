@@ -115,7 +115,7 @@ function startGame(){
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),mat(0x070b17,.65,.5));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);scene.add(new THREE.GridHelper(80,40,0x27335f,0x111a31));
  for(let i=0;i<28;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.07,Math.random()*5+1,.07),neonPart(cfg[style].glow));p.position.set((Math.random()-.5)*35,.5,(Math.random()-.5)*35);scene.add(p)}
  let player=null,playerData=null;createCharacter().then(h=>{playerData=h;player=h.root;player.position.set(0,0,4);scene.add(player);});
- const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};
+ const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};let sprinting=false,crouching=false,jumpY=0,jumpVelocity=0;
  // Sector 07: handcrafted mobile map layout
  const mapGroup=new THREE.Group(); mapGroup.name='SECTOR_07_MAP';
  const colliders=[];
@@ -164,9 +164,10 @@ function startGame(){
    const end=target?target.o.position.clone().add(new THREE.Vector3(0,1,0)):start.clone().addScaledVector(forward,18);
    const life={t:0};const fly=()=>{life.t+=.08;beam.position.lerp(end,.3);if(life.t>=1){scene.remove(beam);if(target&&enemies.includes(target))damageEnemy(target,1);return}requestAnimationFrame(fly)};fly();
  };
+ const jump=()=>{if(!player||crouching||jumpY>0.02)return;jumpVelocity=5.2}; const toggleCrouch=()=>{if(!player)return;crouching=!crouching;};
  const dash=()=>{if(!player||dashCd>0)return;dashCd=1;const v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(0,0,-1);v.normalize();const next=player.position.clone().addScaledVector(v,4);resolveMapCollision(next);player.position.copy(next)};
  const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
- document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash()};});
+ document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash();if(a==='jump')jump();if(a==='crouch')toggleCrouch()};});
  const joystick=$('joystick'),stick=joystick?.querySelector('.joystick-stick');let joyPointer=null;
  let cameraYaw=0,cameraPitch=.16,lookPointer=null,lastLookX=0,lastLookY=0;
  const lookZone=$('lookZone');
@@ -179,10 +180,10 @@ function startGame(){
  lookZone?.addEventListener('pointermove',e=>{if(e.pointerId===lookPointer)applyLook(e)});
  const resetLook=()=>{lookPointer=null};
  lookZone?.addEventListener('pointerup',resetLook);lookZone?.addEventListener('pointercancel',resetLook);
- const updateJoystick=e=>{const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let x=e.clientX-cx,y=e.clientY-cy;const max=r.width*.32;const d=Math.hypot(x,y);if(d>max){x=x/d*max;y=y/d*max}stick.style.transform=`translate(${x}px,${y}px)`;keys.a=x<-max*.22;keys.d=x>max*.22;keys.w=y<-max*.22;keys.s=y>max*.22};
+ const updateJoystick=e=>{const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let x=e.clientX-cx,y=e.clientY-cy;const max=r.width*.42;const d=Math.hypot(x,y);if(d>max){x=x/d*max;y=y/d*max}sprinting=d>max*.72;stick.style.transform=`translate(${x}px,${y}px)`;keys.a=x<-max*.22;keys.d=x>max*.22;keys.w=y<-max*.22;keys.s=y>max*.22};
  joystick?.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);updateJoystick(e)});
  joystick?.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)updateJoystick(e)});
- const resetJoystick=()=>{joyPointer=null;if(stick)stick.style.transform='translate(0,0)';keys.a=keys.d=keys.w=keys.s=false};
+ const resetJoystick=()=>{joyPointer=null;sprinting=false;if(stick)stick.style.transform='translate(0,0)';keys.a=keys.d=keys.w=keys.s=false};
  joystick?.addEventListener('pointerup',resetJoystick);joystick?.addEventListener('pointercancel',resetJoystick);
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
  game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
