@@ -58,13 +58,40 @@ function addGear(root){
     const br=new THREE.Mesh(new THREE.BoxGeometry(.16,.7,.28),accent);br.position.set(.59*s,1.05,.05);h.add(br);
   }
   const belt=new THREE.Mesh(new THREE.TorusGeometry(.43,.045,8,32),glow);belt.rotation.x=Math.PI/2;belt.position.y=.78;belt.scale.set(1.35,1,1);h.add(belt);
+
+  // Stylized mobile-MOBA hero silhouette: layered armor, boots, gauntlets and cape.
+  for(const s of [-1,1]){
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.25,.38,.42),armor);
+    boot.position.set(.18*s,.22,.08);boot.rotation.x=-.08;h.add(boot);
+    const gauntlet=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,.34,12),accent);
+    gauntlet.position.set(.64*s,.86,.08);gauntlet.rotation.z=-Math.PI/2;h.add(gauntlet);
+  }
+  const collar=new THREE.Mesh(new THREE.CylinderGeometry(.24,.32,.16,16),accent);
+  collar.position.set(0,1.72,.02);h.add(collar);
+  const cape=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.18,8,8),new THREE.MeshStandardMaterial({color:c.accent,metalness:.45,roughness:.28,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.35}));
+  cape.position.set(0,1.18,-.28);cape.rotation.x=.12;h.add(cape);
+  const crest=new THREE.Mesh(new THREE.ConeGeometry(.09,.28,5),glow);
+  crest.position.set(0,2.14,.02);crest.rotation.x=Math.PI/2;h.add(crest);
   const visor=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.035),glow);visor.position.set(0,1.93,.25);h.add(visor);
   root.add(h);
+
+  // Signature weapon silhouette for each fighter class.
+  const weapon=new THREE.Group();
   if(style==='HEAVY GUARDIAN'){
-    const hammer=new THREE.Group();
-    const handle=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.9,10),accent);handle.position.set(.72,.9,.2);handle.rotation.z=-.35;hammer.add(handle);
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.32,.22,.22),armor);head.position.set(.86,1.32,.2);hammer.add(head);root.add(hammer);
+    const handle=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,1.15,10),accent);handle.position.set(.72,.86,.2);handle.rotation.z=-.35;weapon.add(handle);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.42,.28,.28),armor);head.position.set(.9,1.42,.2);weapon.add(head);
+    const edge=new THREE.Mesh(new THREE.BoxGeometry(.48,.045,.32),glow);edge.position.set(.9,1.56,.2);weapon.add(edge);
+  }else if(style==='SHIFT RUNNER'){
+    for(const s of [-1,1]){
+      const blade=new THREE.Mesh(new THREE.BoxGeometry(.06,.72,.14),glow);blade.position.set(.58*s,.98,.24);blade.rotation.z=.22*s;weapon.add(blade);
+    }
+  }else if(style==='ENERGY WARRIOR'){
+    const staff=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,1.55,10),accent);staff.position.set(.76,.98,.2);staff.rotation.z=-.28;weapon.add(staff);
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(.14,16,12),glow);orb.position.set(.96,1.72,.2);weapon.add(orb);
+  }else{
+    const blade=new THREE.Mesh(new THREE.BoxGeometry(.08,.85,.12),glow);blade.position.set(.7,1.02,.25);blade.rotation.z=-.2;weapon.add(blade);
   }
+  root.add(weapon);
 }
 function addPhotoBadge(root){
   if(!photo)return;
