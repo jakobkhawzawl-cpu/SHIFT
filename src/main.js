@@ -28,8 +28,8 @@ const $=id=>document.getElementById(id);
 let name='PLAYER',style='NEON CYBER',photo='',stream=null,game=null;
 const MODEL_URLS=[
   'https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/main/public/assets/vendor/quaternius/night-striker.glb',
-  'https://threejs.org/examples/models/gltf/Xbot.glb',
-  'https://threejs.org/examples/models/gltf/Soldier.glb'
+  'https://threejs.org/examples/models/gltf/Soldier.glb',
+  'https://threejs.org/examples/models/gltf/Xbot.glb'
 ];
 const cfg={
 'NEON CYBER':{main:0x263d78,glow:0x62eaff,accent:0x9b70ff,scale:1,speed:5.2},
@@ -207,11 +207,11 @@ function playCharacterAction(h,names){
 
 
 function setupForge(){
-  const el=$('forge3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x050816);
+  const el=$('forge3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x667b8f);
   const cam=new THREE.PerspectiveCamera(32,el.clientWidth/el.clientHeight,.1,100);cam.position.set(0,1.25,4.5);
   const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(el.clientWidth,el.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;el.appendChild(renderer.domElement);
-  scene.add(new THREE.HemisphereLight(0x9aabff,0x090b18,2));const l=new THREE.DirectionalLight(cfg[style].glow,4);l.position.set(3,5,4);l.castShadow=true;scene.add(l);
-  const floor=new THREE.Mesh(new THREE.CircleGeometry(2.2,64),mat(0x0a1230,.4,.55));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x39434d,3.2));const l=new THREE.DirectionalLight(0xffe4c2,4.5);l.position.set(3,5,4);l.castShadow=true;scene.add(l);
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(2.2,64),mat(0x454a50,.3,.65));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
   const rings=[];for(let r=1;r<2.2;r+=.35){const q=new THREE.Mesh(new THREE.TorusGeometry(r,.012,8,64),neonPart(cfg[style].glow));q.rotation.x=Math.PI/2;q.position.y=.02;scene.add(q);rings.push(q)}
   let fighter=null,dead=false;
   createCharacter().then(h=>{if(dead)return;fighter=h;scene.add(h.root);});
@@ -234,17 +234,23 @@ $('enter').onclick=()=>{name=$('name').value.trim()||'PLAYER';$('topName').textC
 $('home').onclick=()=>{if(game)game.running=false;show('menu')};
 
 function startGame(){
- const el=$('game3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x02040a);scene.fog=new THREE.FogExp2(0x050812,.028);
- const camera=new THREE.PerspectiveCamera(58,innerWidth/(innerHeight-76),.1,150);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight-76);renderer.shadowMap.enabled=true;renderer.outputColorSpace=THREE.SRGBColorSpace;el.appendChild(renderer.domElement);
- scene.add(new THREE.HemisphereLight(0x7c8cff,0x080910,1.8));const sun=new THREE.DirectionalLight(0xa9b8ff,3.2);sun.position.set(5,12,7);sun.castShadow=true;scene.add(sun);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),mat(0x070b17,.65,.5));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);scene.add(new THREE.GridHelper(80,40,0x27335f,0x111a31));
- for(let i=0;i<28;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.07,Math.random()*5+1,.07),neonPart(cfg[style].glow));p.position.set((Math.random()-.5)*35,.5,(Math.random()-.5)*35);scene.add(p)}
+ const el=$('game3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fa6bd);scene.fog=new THREE.Fog(0x8fa6bd,42,105);
+ const camera=new THREE.PerspectiveCamera(58,innerWidth/(innerHeight-76),.1,180);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight-76);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;el.appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xddeeff,0x59616b,2.8));const sun=new THREE.DirectionalLight(0xffe2bd,4.2);sun.position.set(-18,24,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),mat(0x454a50,.35,.72));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+ const roadMat=mat(0x24282d,.2,.82),roadLine=mat(0xf2d46b,.1,.6,0x1b1604);
+ for(const z of [-16,-8,0,8,16]){const road=new THREE.Mesh(new THREE.PlaneGeometry(5.4,100),roadMat);road.rotation.x=-Math.PI/2;road.position.set(0,.012,z);scene.add(road);const line=new THREE.Mesh(new THREE.PlaneGeometry(.12,100),roadLine);line.rotation.x=-Math.PI/2;line.position.set(0,.02,z);scene.add(line)}
+ for(const x of [-16,16]){const road=new THREE.Mesh(new THREE.PlaneGeometry(100,5.4),roadMat);road.rotation.x=-Math.PI/2;road.position.set(x,.013,0);scene.add(road)}
+ const cityMat=mat(0x5a626b,.65,.34),glassMat=mat(0x83a9bd,.25,.18,0x07151a);
+ const addCityTower=(x,z,w,d,h)=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),cityMat);b.position.y=h/2;b.castShadow=true;b.receiveShadow=true;g.add(b);for(let y=1.1;y<h-.3;y+=1.15){for(let xx=-w/2+.45;xx<w/2-.2;xx+=.72){const win=new THREE.Mesh(new THREE.BoxGeometry(.34,.48,.025),glassMat);win.position.set(xx,y,d/2+.014);g.add(win);const back=win.clone();back.position.z=-d/2-.014;g.add(back)}}g.position.set(x,0,z);scene.add(g)};
+ addCityTower(-22,-20,8,8,11);addCityTower(22,-20,7,9,15);addCityTower(-22,20,9,7,13);addCityTower(22,20,8,8,9);addCityTower(-8,-25,6,6,7);addCityTower(9,25,6,7,10);
+ const skyline=mat(0x707780,.5,.45);for(let i=0;i<18;i++){const x=(Math.random()-.5)*90,z=(Math.random()-.5)*90;if(Math.abs(x)<28&&Math.abs(z)<28)continue;const h=5+Math.random()*15;const b=new THREE.Mesh(new THREE.BoxGeometry(4+Math.random()*5,h,4+Math.random()*5),skyline);b.position.set(x,h/2,z);b.castShadow=true;scene.add(b)}
  let player=null,playerData=null;createCharacter().then(h=>{playerData=h;player=h.root;player.position.set(0,0,4);scene.add(player);});
  const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};let sprinting=false,crouching=false,jumpY=0,jumpVelocity=0;
  // Sector 07: handcrafted mobile map layout
  const mapGroup=new THREE.Group(); mapGroup.name='SECTOR_07_MAP';
  const colliders=[];
- const mapMat=mat(0x0b1226,.75,.38), edgeMat=neonPart(cfg[style].glow);
+ const mapMat=mat(0x303943,.68,.38), edgeMat=neonPart(cfg[style].glow);
  const addBuilding=(x,z,w,d,h)=>{
    colliders.push({x,z,w,d});
    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mapMat); b.position.set(x,h/2,z); b.castShadow=true;b.receiveShadow=true;mapGroup.add(b);
@@ -271,11 +277,11 @@ function startGame(){
  addBuilding(-9,-8,5,5,3.5);addBuilding(9,-9,6,4,4.2);addBuilding(-11,8,4,6,3);addBuilding(10,8,5,5,3.8);
  addBuilding(0,-13,10,2,2.4);addBuilding(0,13,12,2,2.8);
  addGate(0,-4,0);addGate(0,5,Math.PI/2);
- const plaza=new THREE.Mesh(new THREE.CylinderGeometry(7,7,.12,48),mat(0x101a35,.6,.42));plaza.position.y=.06;mapGroup.add(plaza);
+ const plaza=new THREE.Mesh(new THREE.CylinderGeometry(7,7,.12,48),mat(0x626970,.45,.48));plaza.position.y=.06;mapGroup.add(plaza);
  for(let i=0;i<12;i++){const r=6.2,a=i*Math.PI*2/12;const p=new THREE.Mesh(new THREE.BoxGeometry(.18,.8,.18),edgeMat);p.position.set(Math.cos(a)*r,.4,Math.sin(a)*r);mapGroup.add(p)}
  scene.add(mapGroup);
 
- function enemy(){const g=new THREE.Group(),body=mat(0x301326,.7,.3),glow=neonPart(0xff527d);const b=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.85,5,12),body);b.position.y=.9;g.add(b);const h=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),body);h.position.y=1.7;g.add(h);const v=new THREE.Mesh(new THREE.BoxGeometry(.48,.06,.04),glow);v.position.set(0,1.72,.3);g.add(v);return g}
+ function enemy(){const g=new THREE.Group(),body=mat(0x4d3d42,.7,.3),glow=neonPart(0xff527d);const b=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.85,5,12),body);b.position.y=.9;g.add(b);const h=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),body);h.position.y=1.7;g.add(h);const v=new THREE.Mesh(new THREE.BoxGeometry(.48,.06,.04),glow);v.position.set(0,1.72,.3);g.add(v);return g}
  function addEnemy(){const a=Math.random()*Math.PI*2,d=10+Math.random()*9,e=enemy();e.position.set(Math.cos(a)*d,0,Math.sin(a)*d);scene.add(e);enemies.push({o:e,hp:2})}
  for(let i=0;i<4;i++)addEnemy();
  const damageEnemy=(e,amount)=>{e.hp-=amount;if(e.hp<=0){score+=100;scene.remove(e.o);const n=enemies.indexOf(e);if(n>=0)enemies.splice(n,1);$('score').textContent=String(score).padStart(4,'0')}};
