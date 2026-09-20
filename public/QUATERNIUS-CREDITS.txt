@@ -1,0 +1,7 @@
+SHIFT uses Quaternius Universal Base Characters — Superhero Male as its primary hero base.
+
+Source: https://quaternius.com/packs/universalbasecharacters.html
+Asset: Superhero_Male_FullBody
+License: CC0 1.0 Universal
+
+SHIFT applies its own materials, armor, weapons, effects and gameplay systems on top of the base character.
