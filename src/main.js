@@ -118,10 +118,23 @@ function startGame(){
  const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};
  // Sector 07: handcrafted mobile map layout
  const mapGroup=new THREE.Group(); mapGroup.name='SECTOR_07_MAP';
+ const colliders=[];
  const mapMat=mat(0x0b1226,.75,.38), edgeMat=neonPart(cfg[style].glow);
  const addBuilding=(x,z,w,d,h)=>{
+   colliders.push({x,z,w,d});
    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mapMat); b.position.set(x,h/2,z); b.castShadow=true;b.receiveShadow=true;mapGroup.add(b);
    const e=new THREE.Mesh(new THREE.BoxGeometry(w+.04,.035,d+.04),edgeMat);e.position.set(x,h+.02,z);mapGroup.add(e);
+ };
+ const resolveMapCollision=(pos,radius=.48)=>{
+   for(const box of colliders){
+     const minX=box.x-box.w/2-radius,maxX=box.x+box.w/2+radius,minZ=box.z-box.d/2-radius,maxZ=box.z+box.d/2+radius;
+     if(pos.x>minX&&pos.x<maxX&&pos.z>minZ&&pos.z<maxZ){
+       const pushX=Math.min(Math.abs(pos.x-minX),Math.abs(maxX-pos.x));
+       const pushZ=Math.min(Math.abs(pos.z-minZ),Math.abs(maxZ-pos.z));
+       if(pushX<pushZ)pos.x=pos.x<box.x?minX:maxX;else pos.z=pos.z<box.z?minZ:maxZ;
+     }
+   }
+   return pos;
  };
  const addGate=(x,z,rot=0)=>{
    const g=new THREE.Group();g.rotation.y=rot;g.position.set(x,0,z);
@@ -151,7 +164,7 @@ function startGame(){
    const end=target?target.o.position.clone().add(new THREE.Vector3(0,1,0)):start.clone().addScaledVector(forward,18);
    const life={t:0};const fly=()=>{life.t+=.08;beam.position.lerp(end,.3);if(life.t>=1){scene.remove(beam);if(target&&enemies.includes(target))damageEnemy(target,1);return}requestAnimationFrame(fly)};fly();
  };
- const dash=()=>{if(!player||dashCd>0)return;dashCd=1;const v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(0,0,-1);v.normalize();player.position.addScaledVector(v,4)};
+ const dash=()=>{if(!player||dashCd>0)return;dashCd=1;const v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(0,0,-1);v.normalize();const next=player.position.clone().addScaledVector(v,4);resolveMapCollision(next);player.position.copy(next)};
  const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
  document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash()};});
  const joystick=$('joystick'),stick=joystick?.querySelector('.joystick-stick');let joyPointer=null;
@@ -178,7 +191,7 @@ function startGame(){
    const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
    const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
    const v=forward.clone().multiplyScalar(mz).add(right.multiplyScalar(mx));
-   if(v.lengthSq()>0){v.normalize();player.position.addScaledVector(v,cfg[style].speed*dt)}
+   if(v.lengthSq()>0){v.normalize();const next=player.position.clone().addScaledVector(v,cfg[style].speed*dt);resolveMapCollision(next);player.position.copy(next)}
  }
  if(player){player.position.x=THREE.MathUtils.clamp(player.position.x,-18,18);player.position.z=THREE.MathUtils.clamp(player.position.z,-18,18)}
  attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);shootCd=Math.max(0,shootCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
