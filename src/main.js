@@ -19,7 +19,7 @@ app.innerHTML=`
   <div class="action-buttons">
     <button class="action-btn shoot" data-action="shoot"><span>◉</span><small>SHOOT</small></button>
     <button class="action-btn attack" data-action="attack"><span>✦</span><small>ATTACK</small></button>
-    <button class="action-btn dash" data-action="dash"><span>»</span><small>DASH</small></button>
+    <button class="action-btn dash" data-action="dash"><span>»</span><small>DASH</small></button><button class="action-btn jump" data-action="jump"><span>↟</span><small>JUMP</small></button><button class="action-btn crouch" data-action="crouch"><span>⌄</span><small>CROUCH</small></button>
   </div>
 </div><div id="result" class="result hidden"><small>COMBAT REPORT</small><h2 id="resultTitle">SECTOR CLEAR</h2><p id="resultText"></p><button id="again" class="cta">PLAY AGAIN</button><button id="back" class="small">MAIN MENU</button></div></section>
 </div>`;
