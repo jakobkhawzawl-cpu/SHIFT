@@ -56,14 +56,9 @@ async function loadHuman(){
     if(o.material){
       const materials=Array.isArray(o.material)?o.material:[o.material];
       o.material=materials.map(m=>{
-        const n=(o.name+' '+(m.name||'')).toLowerCase();
         const clone=m.clone();
-        if(/skin|face|head|hand|arm/i.test(n)){
-          clone.color.set(0xd7a27e);clone.metalness=.04;clone.roughness=.52;
-        }else{
-          clone.color.set(0x737b84);clone.metalness=.28;clone.roughness=.42;
-          clone.emissive.set(0x061018);clone.emissiveIntensity=.08;
-        }
+        clone.metalness=Math.min(clone.metalness??0,.18);
+        clone.roughness=Math.max(clone.roughness??.5,.42);
         return clone;
       });
     }
@@ -96,89 +91,55 @@ async function loadHuman(){
   return {root,mixer,actions,clips,normalized};
 }
 function addGear(root){
-  const c=cfg[style],armor=mat(c.main,.88,.16),armor2=mat(0x10182b,.94,.12),glow=neonPart(c.glow),accent=neonPart(c.accent);
-  const h=new THREE.Group();h.name='SHIFT_HERO_SHELL';
+  const c=cfg[style],fabric=mat(c.main,.08,.72),darkFabric=mat(0x182033,.12,.68),glow=neonPart(c.glow),accent=neonPart(c.accent);
+  const gear=new THREE.Group();gear.name='SHIFT_HERO_OUTFIT';
 
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.62,8,20),armor);
-  torso.scale.set(1.34,1.12,.72);torso.position.set(0,1.22,.04);h.add(torso);
-  const chest=new THREE.Mesh(new THREE.SphereGeometry(.52,24,16),armor2);
-  chest.scale.set(1.18,.82,.46);chest.position.set(0,1.34,.27);h.add(chest);
-  const core=new THREE.Mesh(new THREE.OctahedronGeometry(.15,1),glow);
-  core.scale.set(1,1.15,.6);core.position.set(0,1.38,.57);h.add(core);
+  // Human-first design: face, hair, hands and legs remain visible. No helmet or robot shell.
+  const jacket=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.58,8,18),fabric);
+  jacket.scale.set(1.18,1.02,.62);jacket.position.set(0,1.22,.035);gear.add(jacket);
+  const chestPanel=new THREE.Mesh(new THREE.PlaneGeometry(.46,.38,4,4),
+    new THREE.MeshStandardMaterial({color:c.accent,metalness:.05,roughness:.72,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.08}));
+  chestPanel.position.set(0,1.35,.51);gear.add(chestPanel);
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.40,.045,8,28),darkFabric);
+  belt.rotation.x=Math.PI/2;belt.scale.set(1.12,1,1);belt.position.set(0,.83,.02);gear.add(belt);
 
-  const collar=new THREE.Mesh(new THREE.TorusGeometry(.25,.055,10,28),accent);
-  collar.rotation.x=Math.PI/2;collar.position.set(0,1.72,.04);h.add(collar);
-  for(const s of [-1,1]){
-    const shoulder=new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),armor);
-    shoulder.scale.set(1.35,.76,1.08);shoulder.position.set(.54*s,1.48,.02);h.add(shoulder);
-    const shoulderGlow=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,8,24),glow);
-    shoulderGlow.rotation.x=Math.PI/2;shoulderGlow.position.set(.57*s,1.48,.13);h.add(shoulderGlow);
-    const forearm=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.36,7,14),armor2);
-    forearm.rotation.z=-Math.PI/2;forearm.scale.set(1,1,1.18);forearm.position.set(.66*s,.91,.08);h.add(forearm);
-    const gauntlet=new THREE.Mesh(new THREE.SphereGeometry(.16,18,12),accent);
-    gauntlet.scale.set(1.18,.9,1.12);gauntlet.position.set(.77*s,.74,.16);h.add(gauntlet);
-    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.14,.36,7,14),armor);
-    thigh.scale.set(1.18,1.18,1.02);thigh.position.set(.25*s,.54,.02);h.add(thigh);
-    const thighGlow=new THREE.Mesh(new THREE.TorusGeometry(.14,.018,8,20),glow);
-    thighGlow.rotation.x=Math.PI/2;thighGlow.position.set(.25*s,.53,.15);h.add(thighGlow);
-    const boot=new THREE.Mesh(new THREE.SphereGeometry(.21,18,12),armor2);
-    boot.scale.set(1.05,.72,1.45);boot.position.set(.18*s,.18,.10);h.add(boot);
+  for(const side of [-1,1]){
+    const shoulder=new THREE.Mesh(new THREE.SphereGeometry(.20,18,12),fabric);
+    shoulder.scale.set(1.35,.62,1.0);shoulder.position.set(.48*side,1.47,.02);gear.add(shoulder);
+    const wrist=new THREE.Mesh(new THREE.TorusGeometry(.13,.022,8,20),accent);
+    wrist.rotation.x=Math.PI/2;wrist.position.set(.62*side,.84,.16);gear.add(wrist);
   }
 
-  const waist=new THREE.Mesh(new THREE.TorusGeometry(.42,.09,10,32),armor2);
-  waist.rotation.x=Math.PI/2;waist.scale.set(1.22,1,1);waist.position.y=.82;h.add(waist);
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.43,.035,8,32),glow);
-  belt.rotation.x=Math.PI/2;belt.scale.set(1.28,1,1);belt.position.set(0,.79,.03);h.add(belt);
-
-  const hair=new THREE.Mesh(new THREE.SphereGeometry(.29,24,16),armor);
-  hair.scale.set(1.05,.82,.96);hair.position.set(0,2.04,-.015);h.add(hair);
-  const hairFin=new THREE.Mesh(new THREE.ConeGeometry(.12,.42,7),accent);
-  hairFin.position.set(.08,2.30,-.02);hairFin.rotation.z=-.42;h.add(hairFin);
-  const faceGuard=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),armor2);
-  faceGuard.scale.set(1,.48,.78);faceGuard.position.set(0,1.84,.16);h.add(faceGuard);
-  const visor=new THREE.Mesh(new THREE.SphereGeometry(.22,20,10),glow);
-  visor.scale.set(1.22,.12,.18);visor.position.set(0,1.94,.31);h.add(visor);
-  const crest=new THREE.Mesh(new THREE.ConeGeometry(.08,.30,6),glow);
-  crest.position.set(0,2.22,.04);crest.rotation.x=Math.PI/2;h.add(crest);
-  const headRing=new THREE.Mesh(new THREE.TorusGeometry(.28,.018,8,32),glow);
-  headRing.rotation.x=Math.PI/2;headRing.position.set(0,1.96,.02);h.add(headRing);
-
-  const spine=new THREE.Mesh(new THREE.CapsuleGeometry(.045,.72,5,10),accent);
-  spine.position.set(0,1.18,-.28);h.add(spine);
-  const capeGeo=new THREE.PlaneGeometry(1.15,1.45,12,12),p=capeGeo.attributes.position;
-  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,-.10-.18*(1-Math.abs(y)/.72)*(x*x));}
+  const capeGeo=new THREE.PlaneGeometry(1.05,1.25,10,10),cp=capeGeo.attributes.position;
+  for(let i=0;i<cp.count;i++){const x=cp.getX(i),y=cp.getY(i);cp.setZ(i,-.06-.16*(1-Math.abs(y)/.62)*(x*x));}
   capeGeo.computeVertexNormals();
-  const cape=new THREE.Mesh(capeGeo,new THREE.MeshStandardMaterial({color:c.accent,metalness:.35,roughness:.3,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.18}));
-  cape.position.set(0,1.15,-.36);cape.rotation.x=.10;h.add(cape);
+  const cape=new THREE.Mesh(capeGeo,new THREE.MeshStandardMaterial({color:c.accent,metalness:.02,roughness:.82,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.05}));
+  cape.position.set(0,1.10,-.30);cape.rotation.x=.10;gear.add(cape);
 
-  root.add(h);
-
-  // Photo becomes a small identity hologram on the armor, not a floating face plate.
   if(photo){
     const tex=new THREE.TextureLoader().load(photo);
-    const holo=new THREE.Mesh(new THREE.CircleGeometry(.12,24),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.78}));
-    holo.position.set(.29,1.48,.59);holo.name='PLAYER_ID_HOLOGRAM';h.add(holo);
+    const badge=new THREE.Mesh(new THREE.CircleGeometry(.075,20),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.82}));
+    badge.position.set(.28,1.43,.53);gear.add(badge);
   }
 
   const weapon=new THREE.Group();
   if(style==='HEAVY GUARDIAN'){
-    const handle=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.72,6,10),accent);handle.position.set(.70,.76,.24);handle.rotation.z=-.25;weapon.add(handle);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.23,16,10),armor);head.scale.set(1.35,.8,1.05);head.position.set(.84,1.18,.24);weapon.add(head);
-    const edge=new THREE.Mesh(new THREE.TorusGeometry(.15,.025,8,20),glow);edge.rotation.y=Math.PI/2;edge.position.set(.84,1.18,.38);weapon.add(edge);
+    const handle=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.72,6,10),darkFabric);handle.position.set(.72,.78,.22);handle.rotation.z=-.25;weapon.add(handle);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.20,18,12),fabric);head.scale.set(1.35,.78,1.05);head.position.set(.86,1.18,.22);weapon.add(head);
+    const edge=new THREE.Mesh(new THREE.TorusGeometry(.14,.022,8,20),glow);edge.rotation.y=Math.PI/2;edge.position.set(.86,1.18,.36);weapon.add(edge);
   }else if(style==='SHIFT RUNNER'){
-    for(const s of [-1,1]){
-      const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.56,5,10),glow);blade.position.set(.58*s,.88,.27);blade.rotation.z=.28*s;weapon.add(blade);
-      const hilt=new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),accent);hilt.position.set(.56*s,.60,.27);weapon.add(hilt);
+    for(const side of [-1,1]){
+      const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.025,.58,5,10),glow);blade.position.set(.55*side,.72,.30);blade.rotation.z=.22*side;weapon.add(blade);
+      const hilt=new THREE.Mesh(new THREE.SphereGeometry(.07,12,8),accent);hilt.position.set(.52*side,.42,.30);weapon.add(hilt);
     }
   }else if(style==='ENERGY WARRIOR'){
-    const staff=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.98,6,10),accent);staff.position.set(.76,.91,.22);staff.rotation.z=-.20;weapon.add(staff);
-    const orb=new THREE.Mesh(new THREE.SphereGeometry(.15,18,14),glow);orb.position.set(.92,1.48,.22);weapon.add(orb);
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(.20,.018,8,24),glow);ring.position.copy(orb.position);ring.rotation.x=Math.PI/2;weapon.add(ring);
+    const staff=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.98,6,10),darkFabric);staff.position.set(.76,.91,.22);staff.rotation.z=-.20;weapon.add(staff);
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(.13,18,14),glow);orb.position.set(.91,1.46,.22);weapon.add(orb);
   }else{
-    const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.04,.68,6,10),glow);blade.position.set(.68,.92,.27);blade.rotation.z=-.18;weapon.add(blade);
-    const guard=new THREE.Mesh(new THREE.TorusGeometry(.10,.018,8,20),accent);guard.rotation.y=Math.PI/2;guard.position.set(.68,.62,.27);weapon.add(guard);
+    const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.025,.62,6,10),glow);blade.position.set(.66,.72,.29);blade.rotation.z=-.18;weapon.add(blade);
+    const guard=new THREE.Mesh(new THREE.TorusGeometry(.09,.016,8,20),accent);guard.rotation.y=Math.PI/2;guard.position.set(.66,.43,.29);weapon.add(guard);
   }
-  root.add(weapon);
+  root.add(gear);root.add(weapon);
 }
 
 function addPhotoBadge(root){
