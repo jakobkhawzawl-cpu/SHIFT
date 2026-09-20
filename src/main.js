@@ -91,57 +91,104 @@ async function loadHuman(){
   return {root,mixer,actions,clips,normalized};
 }
 function addGear(root){
-  const c=cfg[style],fabric=mat(c.main,.08,.72),darkFabric=mat(0x182033,.12,.68),glow=neonPart(c.glow),accent=neonPart(c.accent);
-  const gear=new THREE.Group();gear.name='SHIFT_HERO_OUTFIT';
+  const c=cfg[style];
+  const fabric=mat(c.main,.02,.82),darkFabric=mat(0x182033,.04,.78);
+  const glow=neonPart(c.glow),accent=neonPart(c.accent);
+  const gear=new THREE.Group();
+  gear.name='SHIFT_HERO_OUTFIT';
 
-  // Human-first design: face, hair, hands and legs remain visible. No helmet or robot shell.
-  const jacket=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.58,8,18),fabric);
-  jacket.scale.set(1.18,1.02,.62);jacket.position.set(0,1.22,.035);gear.add(jacket);
-  const chestPanel=new THREE.Mesh(new THREE.PlaneGeometry(.46,.38,4,4),
-    new THREE.MeshStandardMaterial({color:c.accent,metalness:.05,roughness:.72,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.08}));
-  chestPanel.position.set(0,1.35,.51);gear.add(chestPanel);
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.40,.045,8,28),darkFabric);
-  belt.rotation.x=Math.PI/2;belt.scale.set(1.12,1,1);belt.position.set(0,.83,.02);gear.add(belt);
+  // Hero-realism pass: keep the actual humanoid body, face, hair, hands and legs exposed.
+  // Only add lightweight stylization so the character reads as a game hero rather than a robot.
+  const collar=new THREE.Mesh(
+    new THREE.TorusGeometry(.27,.035,8,24),
+    fabric
+  );
+  collar.rotation.x=Math.PI/2;
+  collar.scale.set(1.15,1,.72);
+  collar.position.set(0,1.55,.02);
+  gear.add(collar);
+
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.39,.026,8,28),darkFabric);
+  belt.rotation.x=Math.PI/2;
+  belt.scale.set(1.08,1,.78);
+  belt.position.set(0,.88,.02);
+  gear.add(belt);
 
   for(const side of [-1,1]){
-    const shoulder=new THREE.Mesh(new THREE.SphereGeometry(.20,18,12),fabric);
-    shoulder.scale.set(1.35,.62,1.0);shoulder.position.set(.48*side,1.47,.02);gear.add(shoulder);
-    const wrist=new THREE.Mesh(new THREE.TorusGeometry(.13,.022,8,20),accent);
-    wrist.rotation.x=Math.PI/2;wrist.position.set(.62*side,.84,.16);gear.add(wrist);
+    const shoulder=new THREE.Mesh(
+      new THREE.SphereGeometry(.14,16,10),
+      fabric
+    );
+    shoulder.scale.set(1.45,.42,.82);
+    shoulder.position.set(.46*side,1.48,.015);
+    gear.add(shoulder);
+
+    const wrist=new THREE.Mesh(new THREE.TorusGeometry(.105,.014,8,18),accent);
+    wrist.rotation.x=Math.PI/2;
+    wrist.position.set(.53*side,.86,.08);
+    gear.add(wrist);
   }
 
-  const capeGeo=new THREE.PlaneGeometry(1.05,1.25,10,10),cp=capeGeo.attributes.position;
-  for(let i=0;i<cp.count;i++){const x=cp.getX(i),y=cp.getY(i);cp.setZ(i,-.06-.16*(1-Math.abs(y)/.62)*(x*x));}
+  // Lightweight hero cape: fabric silhouette, not armor.
+  const capeGeo=new THREE.PlaneGeometry(1.0,1.22,10,10);
+  const cp=capeGeo.attributes.position;
+  for(let i=0;i<cp.count;i++){
+    const x=cp.getX(i),y=cp.getY(i);
+    cp.setZ(i,-.05-.14*(1-Math.abs(y)/.61)*(x*x));
+  }
   capeGeo.computeVertexNormals();
-  const cape=new THREE.Mesh(capeGeo,new THREE.MeshStandardMaterial({color:c.accent,metalness:.02,roughness:.82,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.05}));
-  cape.position.set(0,1.10,-.30);cape.rotation.x=.10;gear.add(cape);
+  const cape=new THREE.Mesh(
+    capeGeo,
+    new THREE.MeshStandardMaterial({
+      color:c.accent,metalness:.01,roughness:.9,
+      side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.035
+    })
+  );
+  cape.position.set(0,1.13,-.28);
+  cape.rotation.x=.08;
+  gear.add(cape);
 
   if(photo){
     const tex=new THREE.TextureLoader().load(photo);
-    const badge=new THREE.Mesh(new THREE.CircleGeometry(.075,20),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.82}));
-    badge.position.set(.28,1.43,.53);gear.add(badge);
+    const badge=new THREE.Mesh(
+      new THREE.CircleGeometry(.065,20),
+      new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.8})
+    );
+    badge.position.set(.25,1.42,.34);
+    gear.add(badge);
   }
 
+  // Signature hero weapon. Keep it separate from the body so the silhouette stays human.
   const weapon=new THREE.Group();
   if(style==='HEAVY GUARDIAN'){
-    const handle=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.72,6,10),darkFabric);handle.position.set(.72,.78,.22);handle.rotation.z=-.25;weapon.add(handle);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.20,18,12),fabric);head.scale.set(1.35,.78,1.05);head.position.set(.86,1.18,.22);weapon.add(head);
-    const edge=new THREE.Mesh(new THREE.TorusGeometry(.14,.022,8,20),glow);edge.rotation.y=Math.PI/2;edge.position.set(.86,1.18,.36);weapon.add(edge);
+    const handle=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.68,6,10),darkFabric);
+    handle.position.set(.66,.75,.22);handle.rotation.z=-.25;weapon.add(handle);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.17,16,10),fabric);
+    head.scale.set(1.35,.72,1.0);head.position.set(.82,1.12,.22);weapon.add(head);
+    const edge=new THREE.Mesh(new THREE.TorusGeometry(.12,.016,8,20),glow);
+    edge.rotation.y=Math.PI/2;edge.position.set(.82,1.12,.34);weapon.add(edge);
   }else if(style==='SHIFT RUNNER'){
     for(const side of [-1,1]){
-      const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.025,.58,5,10),glow);blade.position.set(.55*side,.72,.30);blade.rotation.z=.22*side;weapon.add(blade);
-      const hilt=new THREE.Mesh(new THREE.SphereGeometry(.07,12,8),accent);hilt.position.set(.52*side,.42,.30);weapon.add(hilt);
+      const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.02,.54,5,10),glow);
+      blade.position.set(.48*side,.70,.27);blade.rotation.z=.2*side;weapon.add(blade);
+      const hilt=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),accent);
+      hilt.position.set(.46*side,.43,.27);weapon.add(hilt);
     }
   }else if(style==='ENERGY WARRIOR'){
-    const staff=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.98,6,10),darkFabric);staff.position.set(.76,.91,.22);staff.rotation.z=-.20;weapon.add(staff);
-    const orb=new THREE.Mesh(new THREE.SphereGeometry(.13,18,14),glow);orb.position.set(.91,1.46,.22);weapon.add(orb);
+    const staff=new THREE.Mesh(new THREE.CapsuleGeometry(.026,.94,6,10),darkFabric);
+    staff.position.set(.70,.88,.22);staff.rotation.z=-.20;weapon.add(staff);
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(.115,16,12),glow);
+    orb.position.set(.84,1.40,.22);weapon.add(orb);
   }else{
-    const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.025,.62,6,10),glow);blade.position.set(.66,.72,.29);blade.rotation.z=-.18;weapon.add(blade);
-    const guard=new THREE.Mesh(new THREE.TorusGeometry(.09,.016,8,20),accent);guard.rotation.y=Math.PI/2;guard.position.set(.66,.43,.29);weapon.add(guard);
+    const blade=new THREE.Mesh(new THREE.CapsuleGeometry(.02,.58,6,10),glow);
+    blade.position.set(.60,.70,.28);blade.rotation.z=-.18;weapon.add(blade);
+    const guard=new THREE.Mesh(new THREE.TorusGeometry(.075,.012,8,20),accent);
+    guard.rotation.y=Math.PI/2;guard.position.set(.60,.43,.28);weapon.add(guard);
   }
-  root.add(gear);root.add(weapon);
-}
 
+  root.add(gear);
+  root.add(weapon);
+}
 function addPhotoBadge(root){
   if(!photo)return;
   const tex=new THREE.TextureLoader().load(photo);
@@ -170,7 +217,7 @@ function playCharacterAction(h,names){
 function setupForge(){
   const el=$('forge3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x667b8f);
   const cam=new THREE.PerspectiveCamera(32,el.clientWidth/el.clientHeight,.1,100);cam.position.set(0,1.25,4.5);
-  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(el.clientWidth,el.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;el.appendChild(renderer.domElement);
+  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(el.clientWidth,el.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.shadowMap.enabled=true;el.appendChild(renderer.domElement);
   scene.add(new THREE.HemisphereLight(0xffffff,0x39434d,3.2));const l=new THREE.DirectionalLight(0xffe4c2,4.5);l.position.set(3,5,4);l.castShadow=true;scene.add(l);
   const floor=new THREE.Mesh(new THREE.CircleGeometry(2.2,64),mat(0x454a50,.3,.65));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
   const rings=[];for(let r=1;r<2.2;r+=.35){const q=new THREE.Mesh(new THREE.TorusGeometry(r,.012,8,64),neonPart(cfg[style].glow));q.rotation.x=Math.PI/2;q.position.y=.02;scene.add(q);rings.push(q)}
@@ -196,7 +243,7 @@ $('home').onclick=()=>{if(game)game.running=false;show('menu')};
 
 function startGame(){
  const el=$('game3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fa6bd);scene.fog=new THREE.Fog(0x8fa6bd,42,105);
- const camera=new THREE.PerspectiveCamera(58,innerWidth/(innerHeight-76),.1,180);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight-76);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;el.appendChild(renderer.domElement);
+ const camera=new THREE.PerspectiveCamera(58,innerWidth/(innerHeight-76),.1,180);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight-76);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;el.appendChild(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0xddeeff,0x59616b,2.8));const sun=new THREE.DirectionalLight(0xffe2bd,4.2);sun.position.set(-18,24,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),mat(0x454a50,.35,.72));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
  const roadMat=mat(0x24282d,.2,.82),roadLine=mat(0xf2d46b,.1,.6,0x1b1604);
