@@ -156,7 +156,7 @@ function startGame(){
  const damageEnemy=(e,amount)=>{e.hp-=amount;if(e.hp<=0){score+=100;scene.remove(e.o);const n=enemies.indexOf(e);if(n>=0)enemies.splice(n,1);$('score').textContent=String(score).padStart(4,'0')}};
  const attack=()=>{if(!player||attackCd>0)return;attackCd=.5;for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(player.position.distanceTo(e.o.position)<2.5)damageEnemy(e,1)}};
  const shoot=()=>{if(!player||shootCd>0)return;shootCd=.22;
-   const forward=new THREE.Vector3(0,0,-1).applyQuaternion(player.quaternion).normalize();
+   const forward=new THREE.Vector3(Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize();
    let target=null,best=999;
    for(const e of enemies){const to=e.o.position.clone().sub(player.position);const d=to.length();if(d>18)continue;to.normalize();const dot=forward.dot(to);if(dot>.82&&d<best){best=d;target=e}}
    const start=player.position.clone().add(new THREE.Vector3(0,1.45,0)).addScaledVector(forward,.8);
