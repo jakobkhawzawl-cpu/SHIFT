@@ -41,12 +41,51 @@ function neonPart(color){return mat(color,.55,.18,color)}
 async function loadHuman(){
   const gltf=await new Promise((resolve,reject)=>loader.load(MODEL_URL,resolve,undefined,reject));
   const root=gltf.scene;
-  root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  root.traverse(o=>{
+    if(!o.isMesh)return;
+    o.castShadow=true;o.receiveShadow=true;
+    // Re-skin the generic source model into a clean futuristic hero palette.
+    if(o.material){
+      const materials=Array.isArray(o.material)?o.material:[o.material];
+      o.material=materials.map(m=>{
+        const n=(o.name+' '+(m.name||'')).toLowerCase();
+        const clone=m.clone();
+        if(/skin|face|head|hand|arm/i.test(n)){
+          clone.color.set(0xc58f78);clone.metalness=.08;clone.roughness=.48;
+        }else{
+          clone.color.set(0x182640);clone.metalness=.78;clone.roughness=.24;
+          clone.emissive.set(0x07152d);clone.emissiveIntensity=.35;
+        }
+        return clone;
+      });
+    }
+  });
   const clips=gltf.animations||[];
   const mixer=clips.length?new THREE.AnimationMixer(root):null;
   const actions={};
-  if(mixer) clips.forEach(c=>actions[c.name.toLowerCase()]=mixer.clipAction(c));
-  return {root,mixer,actions,clips};
+  if(mixer){
+    clips.forEach(c=>{
+      const key=c.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+      actions[key]=mixer.clipAction(c);
+    });
+  }
+  // Normalize common Soldier.glb clip names so the game can request
+  // idle/walk/run/jump/crouch without depending on exact source naming.
+  const pick=(...names)=>{
+    for(const n of names){
+      const k=n.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(actions[k])return actions[k];
+    }
+    return null;
+  };
+  const normalized={
+    idle:pick('idle','idle01','idle02'),
+    walk:pick('walk','walk01','walking'),
+    run:pick('run','run01','running'),
+    jump:pick('jump','jump01','jumping'),
+    crouch:pick('crouch','crouching','sit')
+  };
+  return {root,mixer,actions,clips,normalized};
 }
 function addGear(root){
   const c=cfg[style],armor=mat(c.main,.9,.2),glow=neonPart(c.glow),accent=neonPart(c.accent);
@@ -73,6 +112,12 @@ function addGear(root){
   const crest=new THREE.Mesh(new THREE.ConeGeometry(.09,.28,5),glow);
   crest.position.set(0,2.14,.02);crest.rotation.x=Math.PI/2;h.add(crest);
   const visor=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.035),glow);visor.position.set(0,1.93,.25);h.add(visor);
+  const headRing=new THREE.Mesh(new THREE.TorusGeometry(.25,.025,8,24),glow);
+  headRing.rotation.x=Math.PI/2;headRing.position.set(0,1.91,.02);h.add(headRing);
+  const hipArmor=new THREE.Mesh(new THREE.BoxGeometry(.92,.24,.42),armor);
+  hipArmor.position.set(0,.72,.05);hipArmor.rotation.x=-.04;h.add(hipArmor);
+  const spine=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.18),accent);
+  spine.position.set(0,1.18,-.25);h.add(spine);
   root.add(h);
 
   // Signature weapon silhouette for each fighter class.
@@ -102,17 +147,16 @@ function addPhotoBadge(root){
 async function createCharacter(){
   const h=await loadHuman(); addGear(h.root); addPhotoBadge(h.root);
   h.baseScale=cfg[style].scale;
-  h.root.scale.setScalar(h.baseScale);
+  h.root.scale.set(h.baseScale,h.baseScale,h.baseScale);
   h.root.position.y=0;
-  const idle=h.actions['idle'];
-  if(idle)idle.play(); else if(h.clips[0])h.mixer.clipAction(h.clips[0]).play();
+  const idle=h.normalized.idle;
+  if(idle)idle.play(); else if(h.clips[0]&&h.mixer)h.mixer.clipAction(h.clips[0]).play();
   h.currentAction=idle||null;
   return h;
 }
 function playCharacterAction(h,names){
   if(!h?.mixer)return;
-  const key=names.find(n=>h.actions[n]);
-  const next=key?h.actions[key]:null;
+  const next=names.map(n=>h.normalized?.[n]||h.actions?.[n]).find(Boolean)||null;
   if(next===h.currentAction)return;
   if(h.currentAction)h.currentAction.fadeOut(.12);
   if(next){next.reset().fadeIn(.12).play();h.currentAction=next;}
@@ -194,7 +238,7 @@ function startGame(){
  const damageEnemy=(e,amount)=>{e.hp-=amount;if(e.hp<=0){score+=100;scene.remove(e.o);const n=enemies.indexOf(e);if(n>=0)enemies.splice(n,1);$('score').textContent=String(score).padStart(4,'0')}};
  const attack=()=>{if(!player||attackCd>0)return;attackCd=.5;for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(player.position.distanceTo(e.o.position)<2.5)damageEnemy(e,1)}};
  const shoot=()=>{if(!player||shootCd>0)return;shootCd=.22;
-   const forward=new THREE.Vector3(Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize();
+   const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw)).normalize();
    let target=null,best=999;
    for(const e of enemies){const to=e.o.position.clone().sub(player.position);const d=to.length();if(d>18)continue;to.normalize();const dot=forward.dot(to);if(dot>.82&&d<best){best=d;target=e}}
    const start=player.position.clone().add(new THREE.Vector3(0,1.45,0)).addScaledVector(forward,.8);
@@ -202,7 +246,7 @@ function startGame(){
    const end=target?target.o.position.clone().add(new THREE.Vector3(0,1,0)):start.clone().addScaledVector(forward,18);
    const life={t:0};const fly=()=>{life.t+=.08;beam.position.lerp(end,.3);if(life.t>=1){scene.remove(beam);if(target&&enemies.includes(target))damageEnemy(target,1);return}requestAnimationFrame(fly)};fly();
  };
- const jump=()=>{if(!player||crouching||jumpY>0.02)return;jumpVelocity=5.2;playCharacterAction(playerData,['jump','run','walk']);}; const toggleCrouch=()=>{if(!player)return;crouching=!crouching;if(playerData)playerData.root.scale.y=playerData.baseScale*(crouching?.82:1);playCharacterAction(playerData,crouching?['crouch','idle']:['idle']);};
+ const jump=()=>{if(!player||crouching||jumpY>0.02)return;jumpVelocity=5.2;playCharacterAction(playerData,['jump','run','walk']);}; const toggleCrouch=()=>{if(!player)return;crouching=!crouching;if(playerData)playerData.root.scale.set(playerData.baseScale,playerData.baseScale*(crouching?.82:1),playerData.baseScale);playCharacterAction(playerData,crouching?['crouch','idle']:['idle']);};
  const dash=()=>{if(!player||dashCd>0)return;dashCd=1;let v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(Math.sin(cameraYaw),0,Math.cos(cameraYaw));else{const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));v=forward.multiplyScalar(v.z).add(right.multiplyScalar(v.x));}v.normalize();const next=player.position.clone().addScaledVector(v,4);resolveMapCollision(next);player.position.copy(next);playCharacterAction(playerData,['run','walk']);};
  const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
  document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash();if(a==='jump')jump();if(a==='crouch')toggleCrouch()};});
