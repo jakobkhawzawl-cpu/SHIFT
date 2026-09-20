@@ -116,6 +116,27 @@ function startGame(){
  for(let i=0;i<28;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.07,Math.random()*5+1,.07),neonPart(cfg[style].glow));p.position.set((Math.random()-.5)*35,.5,(Math.random()-.5)*35);scene.add(p)}
  let player=null,playerData=null;createCharacter().then(h=>{playerData=h;player=h.root;player.position.set(0,0,4);scene.add(player);});
  const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};
+ // Sector 07: handcrafted mobile map layout
+ const mapGroup=new THREE.Group(); mapGroup.name='SECTOR_07_MAP';
+ const mapMat=mat(0x0b1226,.75,.38), edgeMat=neonPart(cfg[style].glow);
+ const addBuilding=(x,z,w,d,h)=>{
+   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mapMat); b.position.set(x,h/2,z); b.castShadow=true;b.receiveShadow=true;mapGroup.add(b);
+   const e=new THREE.Mesh(new THREE.BoxGeometry(w+.04,.035,d+.04),edgeMat);e.position.set(x,h+.02,z);mapGroup.add(e);
+ };
+ const addGate=(x,z,rot=0)=>{
+   const g=new THREE.Group();g.rotation.y=rot;g.position.set(x,0,z);
+   const left=new THREE.Mesh(new THREE.BoxGeometry(.22,3.2,.22),edgeMat);left.position.x=-2.2;
+   const right=left.clone();right.position.x=2.2;
+   const top=new THREE.Mesh(new THREE.BoxGeometry(4.6,.22,.22),edgeMat);top.position.y=3.1;
+   g.add(left,right,top);mapGroup.add(g);
+ };
+ addBuilding(-9,-8,5,5,3.5);addBuilding(9,-9,6,4,4.2);addBuilding(-11,8,4,6,3);addBuilding(10,8,5,5,3.8);
+ addBuilding(0,-13,10,2,2.4);addBuilding(0,13,12,2,2.8);
+ addGate(0,-4,0);addGate(0,5,Math.PI/2);
+ const plaza=new THREE.Mesh(new THREE.CylinderGeometry(7,7,.12,48),mat(0x101a35,.6,.42));plaza.position.y=.06;mapGroup.add(plaza);
+ for(let i=0;i<12;i++){const r=6.2,a=i*Math.PI*2/12;const p=new THREE.Mesh(new THREE.BoxGeometry(.18,.8,.18),edgeMat);p.position.set(Math.cos(a)*r,.4,Math.sin(a)*r);mapGroup.add(p)}
+ scene.add(mapGroup);
+
  function enemy(){const g=new THREE.Group(),body=mat(0x301326,.7,.3),glow=neonPart(0xff527d);const b=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.85,5,12),body);b.position.y=.9;g.add(b);const h=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),body);h.position.y=1.7;g.add(h);const v=new THREE.Mesh(new THREE.BoxGeometry(.48,.06,.04),glow);v.position.set(0,1.72,.3);g.add(v);return g}
  function addEnemy(){const a=Math.random()*Math.PI*2,d=10+Math.random()*9,e=enemy();e.position.set(Math.cos(a)*d,0,Math.sin(a)*d);scene.add(e);enemies.push({o:e,hp:2})}
  for(let i=0;i<4;i++)addEnemy();
