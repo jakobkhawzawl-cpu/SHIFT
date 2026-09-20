@@ -101,12 +101,23 @@ function addPhotoBadge(root){
 }
 async function createCharacter(){
   const h=await loadHuman(); addGear(h.root); addPhotoBadge(h.root);
-  h.root.scale.setScalar(cfg[style].scale);
+  h.baseScale=cfg[style].scale;
+  h.root.scale.setScalar(h.baseScale);
   h.root.position.y=0;
   const idle=h.actions['idle'];
   if(idle)idle.play(); else if(h.clips[0])h.mixer.clipAction(h.clips[0]).play();
+  h.currentAction=idle||null;
   return h;
 }
+function playCharacterAction(h,names){
+  if(!h?.mixer)return;
+  const key=names.find(n=>h.actions[n]);
+  const next=key?h.actions[key]:null;
+  if(next===h.currentAction)return;
+  if(h.currentAction)h.currentAction.fadeOut(.12);
+  if(next){next.reset().fadeIn(.12).play();h.currentAction=next;}
+}
+
 
 function setupForge(){
   const el=$('forge3d');el.innerHTML='';const scene=new THREE.Scene();scene.background=new THREE.Color(0x050816);
@@ -191,8 +202,8 @@ function startGame(){
    const end=target?target.o.position.clone().add(new THREE.Vector3(0,1,0)):start.clone().addScaledVector(forward,18);
    const life={t:0};const fly=()=>{life.t+=.08;beam.position.lerp(end,.3);if(life.t>=1){scene.remove(beam);if(target&&enemies.includes(target))damageEnemy(target,1);return}requestAnimationFrame(fly)};fly();
  };
- const jump=()=>{if(!player||crouching||jumpY>0.02)return;jumpVelocity=5.2}; const toggleCrouch=()=>{if(!player)return;crouching=!crouching;};
- const dash=()=>{if(!player||dashCd>0)return;dashCd=1;const v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(0,0,-1);v.normalize();const next=player.position.clone().addScaledVector(v,4);resolveMapCollision(next);player.position.copy(next)};
+ const jump=()=>{if(!player||crouching||jumpY>0.02)return;jumpVelocity=5.2;playCharacterAction(playerData,['jump','run','walk']);}; const toggleCrouch=()=>{if(!player)return;crouching=!crouching;if(playerData)playerData.root.scale.y=playerData.baseScale*(crouching?.82:1);playCharacterAction(playerData,crouching?['crouch','idle']:['idle']);};
+ const dash=()=>{if(!player||dashCd>0)return;dashCd=1;let v=new THREE.Vector3((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),0,(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(v.lengthSq()===0)v.set(Math.sin(cameraYaw),0,Math.cos(cameraYaw));else{const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));v=forward.multiplyScalar(v.z).add(right.multiplyScalar(v.x));}v.normalize();const next=player.position.clone().addScaledVector(v,4);resolveMapCollision(next);player.position.copy(next);playCharacterAction(playerData,['run','walk']);};
  const kd=e=>{keys[e.key]=true;if(e.code==='Space'){e.preventDefault();attack()}if(e.key.toLowerCase()==='f')shoot();if(e.key==='Shift')dash()},ku=e=>keys[e.key]=false;addEventListener('keydown',kd);addEventListener('keyup',ku);
  document.querySelectorAll('[data-action]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();const a=b.dataset.action;if(a==='attack')attack();if(a==='shoot')shoot();if(a==='dash')dash();if(a==='jump')jump();if(a==='crouch')toggleCrouch()};});
  const joystick=$('joystick'),stick=joystick?.querySelector('.joystick-stick');let joyPointer=null;
@@ -214,12 +225,12 @@ function startGame(){
  joystick?.addEventListener('pointerup',resetJoystick);joystick?.addEventListener('pointercancel',resetJoystick);
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
  game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
- const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;if(player){jumpVelocity-=14*dt;jumpY=Math.max(0,jumpY+jumpVelocity*dt);if(jumpY===0)jumpVelocity=0;player.position.y=jumpY}const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
+ const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;if(player){const wasAirborne=jumpY>0.02;jumpVelocity-=14*dt;jumpY=Math.max(0,jumpY+jumpVelocity*dt);if(jumpY===0){jumpVelocity=0;if(wasAirborne)playCharacterAction(playerData,['idle']);}player.position.y=jumpY}const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
  if(player&&(mx||mz)){
    const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
    const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
    const v=forward.clone().multiplyScalar(mz).add(right.multiplyScalar(mx));
-   if(v.lengthSq()>0){v.normalize();const moveSpeed=cfg[style].speed*(sprinting&&!crouching?1.45:1)*(crouching?.58:1);const next=player.position.clone().addScaledVector(v,moveSpeed*dt);resolveMapCollision(next);player.position.copy(next);player.rotation.y=Math.atan2(v.x,v.z)}
+   if(v.lengthSq()>0){v.normalize();const moveSpeed=cfg[style].speed*(sprinting&&!crouching?1.45:1)*(crouching?.58:1);const next=player.position.clone().addScaledVector(v,moveSpeed*dt);resolveMapCollision(next);player.position.copy(next);player.rotation.y=Math.atan2(v.x,v.z);playCharacterAction(playerData,crouching?['crouch','walk']:sprinting?['run','walk']:['walk','idle'])}
  }
  if(player){player.position.x=THREE.MathUtils.clamp(player.position.x,-18,18);player.position.z=THREE.MathUtils.clamp(player.position.z,-18,18)}
  attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);shootCd=Math.max(0,shootCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
@@ -228,7 +239,7 @@ function startGame(){
  if(player){
    const target=player.position.clone().add(new THREE.Vector3(0,1.25,0));
    const distance=6.8,cy=Math.cos(cameraPitch),sy=Math.sin(cameraPitch);
-   const offset=new THREE.Vector3(Math.sin(cameraYaw)*distance*cy,1.4+distance*sy,Math.cos(cameraYaw)*distance*cy);
+   const offset=new THREE.Vector3(Math.sin(cameraYaw)*distance*cy,1.4+distance*sy-(crouching?.32:0),Math.cos(cameraYaw)*distance*cy);
    camera.position.lerp(target.clone().add(offset),.12);camera.lookAt(target);
  }
  renderer.render(scene,camera);if(hp<=0)return finish(false);if(score>=1200)return finish(true);requestAnimationFrame(loop)};
