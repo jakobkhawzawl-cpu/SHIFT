@@ -187,12 +187,12 @@ function startGame(){
  joystick?.addEventListener('pointerup',resetJoystick);joystick?.addEventListener('pointercancel',resetJoystick);
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
  game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
- const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
+ const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;if(player){jumpVelocity-=14*dt;jumpY=Math.max(0,jumpY+jumpVelocity*dt);if(jumpY===0)jumpVelocity=0;player.position.y=jumpY}const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
  if(player&&(mx||mz)){
    const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
    const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
    const v=forward.clone().multiplyScalar(mz).add(right.multiplyScalar(mx));
-   if(v.lengthSq()>0){v.normalize();const next=player.position.clone().addScaledVector(v,cfg[style].speed*dt);resolveMapCollision(next);player.position.copy(next)}
+   if(v.lengthSq()>0){v.normalize();const moveSpeed=cfg[style].speed*(sprinting&&!crouching?1.45:1)*(crouching?.58:1);const next=player.position.clone().addScaledVector(v,moveSpeed*dt);resolveMapCollision(next);player.position.copy(next);player.rotation.y=Math.atan2(v.x,v.z)}
  }
  if(player){player.position.x=THREE.MathUtils.clamp(player.position.x,-18,18);player.position.z=THREE.MathUtils.clamp(player.position.z,-18,18)}
  attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);shootCd=Math.max(0,shootCd-dt);spawn-=dt;if(spawn<=0&&enemies.length<8){addEnemy();spawn=.9}
