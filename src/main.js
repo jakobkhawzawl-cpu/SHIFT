@@ -32,10 +32,10 @@ const MODEL_URLS=[
   'https://threejs.org/examples/models/gltf/Xbot.glb'
 ];
 const cfg={
-'NEON CYBER':{main:0x263d78,glow:0x62eaff,accent:0x9b70ff,scale:1,speed:5.2},
-'HEAVY GUARDIAN':{main:0x3d465d,glow:0xb8d9ff,accent:0x7f8cff,scale:1.08,speed:4.1},
-'SHIFT RUNNER':{main:0x162c56,glow:0x55f6ff,accent:0x67a7ff,scale:.96,speed:6.5},
-'ENERGY WARRIOR':{main:0x432c70,glow:0xe48cff,accent:0xffb1e9,scale:1,speed:5.2}
+'NEON CYBER':{main:0x405a8a,glow:0x62eaff,accent:0x9b70ff,scale:1,speed:5.2},
+'HEAVY GUARDIAN':{main:0x66717f,glow:0xb8d9ff,accent:0x7f8cff,scale:1.08,speed:4.1},
+'SHIFT RUNNER':{main:0x345878,glow:0x55f6ff,accent:0x67a7ff,scale:.96,speed:6.5},
+'ENERGY WARRIOR':{main:0x674d86,glow:0xe48cff,accent:0xffb1e9,scale:1,speed:5.2}
 };
 const loader=new GLTFLoader();
 
@@ -59,10 +59,10 @@ async function loadHuman(){
         const n=(o.name+' '+(m.name||'')).toLowerCase();
         const clone=m.clone();
         if(/skin|face|head|hand|arm/i.test(n)){
-          clone.color.set(0xc58f78);clone.metalness=.08;clone.roughness=.48;
+          clone.color.set(0xd7a27e);clone.metalness=.04;clone.roughness=.52;
         }else{
-          clone.color.set(0x182640);clone.metalness=.78;clone.roughness=.24;
-          clone.emissive.set(0x07152d);clone.emissiveIntensity=.35;
+          clone.color.set(0x737b84);clone.metalness=.28;clone.roughness=.42;
+          clone.emissive.set(0x061018);clone.emissiveIntensity=.08;
         }
         return clone;
       });
