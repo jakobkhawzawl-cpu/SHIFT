@@ -26,7 +26,7 @@ app.innerHTML=`
 
 const $=id=>document.getElementById(id);
 let name='PLAYER',style='NEON CYBER',photo='',stream=null,game=null;
-const MODEL_URL='https://threejs.org/examples/models/gltf/Soldier.glb';
+const MODEL_URLS=['https://threejs.org/examples/models/gltf/Xbot.glb','https://threejs.org/examples/models/gltf/Soldier.glb'];
 const cfg={
 'NEON CYBER':{main:0x263d78,glow:0x62eaff,accent:0x9b70ff,scale:1,speed:5.2},
 'HEAVY GUARDIAN':{main:0x3d465d,glow:0xb8d9ff,accent:0x7f8cff,scale:1.08,speed:4.1},
@@ -39,7 +39,9 @@ function mat(color,metal=.7,rough=.25,em=0){return new THREE.MeshStandardMateria
 function neonPart(color){return mat(color,.55,.18,color)}
 
 async function loadHuman(){
-  const gltf=await new Promise((resolve,reject)=>loader.load(MODEL_URL,resolve,undefined,reject));
+  let gltf=null,lastError=null;
+  for(const url of MODEL_URLS){try{gltf=await new Promise((resolve,reject)=>loader.load(url,resolve,undefined,reject));break}catch(err){lastError=err}}
+  if(!gltf)throw lastError||new Error('Unable to load hero model');
   const root=gltf.scene;
   root.traverse(o=>{
     if(!o.isMesh)return;
@@ -107,15 +109,19 @@ function addGear(root){
   }
   const collar=new THREE.Mesh(new THREE.CylinderGeometry(.24,.32,.16,16),accent);
   collar.position.set(0,1.72,.02);h.add(collar);
-  const cape=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.18,8,8),new THREE.MeshStandardMaterial({color:c.accent,metalness:.45,roughness:.28,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.35}));
-  cape.position.set(0,1.18,-.28);cape.rotation.x=.12;h.add(cape);
+  const cape=new THREE.Mesh(new THREE.PlaneGeometry(1.15,1.35,10,10),new THREE.MeshStandardMaterial({color:c.accent,metalness:.45,roughness:.28,side:THREE.DoubleSide,emissive:c.glow,emissiveIntensity:.35}));
+  cape.position.set(0,1.2,-.34);cape.rotation.x=.12;h.add(cape);
   const crest=new THREE.Mesh(new THREE.ConeGeometry(.09,.28,5),glow);
   crest.position.set(0,2.14,.02);crest.rotation.x=Math.PI/2;h.add(crest);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.29,18,12),armor);hair.scale.set(1,.72,.88);hair.position.set(0,2.04,-.01);h.add(hair);
+  const hairFin=new THREE.Mesh(new THREE.ConeGeometry(.11,.42,5),accent);hairFin.position.set(.08,2.28,-.02);hairFin.rotation.z=-.42;h.add(hairFin);
+  const jaw=new THREE.Mesh(new THREE.BoxGeometry(.42,.12,.22),armor);jaw.position.set(0,1.79,.16);h.add(jaw);
   const visor=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.035),glow);visor.position.set(0,1.93,.25);h.add(visor);
   const headRing=new THREE.Mesh(new THREE.TorusGeometry(.25,.025,8,24),glow);
   headRing.rotation.x=Math.PI/2;headRing.position.set(0,1.91,.02);h.add(headRing);
   const hipArmor=new THREE.Mesh(new THREE.BoxGeometry(.92,.24,.42),armor);
   hipArmor.position.set(0,.72,.05);hipArmor.rotation.x=-.04;h.add(hipArmor);
+  for(const s of [-1,1]){const thigh=new THREE.Mesh(new THREE.BoxGeometry(.24,.5,.34),armor);thigh.position.set(.28*s,.52,.04);thigh.rotation.z=.03*s;h.add(thigh);const thighGlow=new THREE.Mesh(new THREE.BoxGeometry(.045,.32,.05),glow);thighGlow.position.set(.28*s,.54,.22);h.add(thighGlow);}
   const spine=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.18),accent);
   spine.position.set(0,1.18,-.25);h.add(spine);
   root.add(h);
