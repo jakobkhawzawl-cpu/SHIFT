@@ -26,7 +26,11 @@ app.innerHTML=`
 
 const $=id=>document.getElementById(id);
 let name='PLAYER',style='NEON CYBER',photo='',stream=null,game=null;
-const MODEL_URLS=['https://threejs.org/examples/models/gltf/Xbot.glb','https://threejs.org/examples/models/gltf/Soldier.glb'];
+const MODEL_URLS=[
+  'https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/main/public/assets/vendor/quaternius/night-striker.glb',
+  'https://threejs.org/examples/models/gltf/Xbot.glb',
+  'https://threejs.org/examples/models/gltf/Soldier.glb'
+];
 const cfg={
 'NEON CYBER':{main:0x263d78,glow:0x62eaff,accent:0x9b70ff,scale:1,speed:5.2},
 'HEAVY GUARDIAN':{main:0x3d465d,glow:0xb8d9ff,accent:0x7f8cff,scale:1.08,speed:4.1},
@@ -46,7 +50,9 @@ async function loadHuman(){
   root.traverse(o=>{
     if(!o.isMesh)return;
     o.castShadow=true;o.receiveShadow=true;
-    // Re-skin the generic source model into a clean futuristic hero palette.
+    // SHIFT uses Quaternius Superhero Male as the primary CC0 hero base.
+  // The model is then re-skinned and wrapped with SHIFT-specific armor, effects and weapons.
+  // Re-skin the source model into a clean futuristic hero palette.
     if(o.material){
       const materials=Array.isArray(o.material)?o.material:[o.material];
       o.material=materials.map(m=>{
@@ -182,7 +188,7 @@ function addPhotoBadge(root){
   badge.position.set(.34,1.98,.29);badge.rotation.y=.2;badge.name='PLAYER_FACE_REFERENCE';root.add(badge);
 }
 async function createCharacter(){
-  const h=await loadHuman(); addGear(h.root); addPhotoBadge(h.root);
+  const h=await loadHuman(); addGear(h.root);
   h.baseScale=cfg[style].scale;
   h.root.scale.set(h.baseScale,h.baseScale,h.baseScale);
   h.root.position.y=0;
