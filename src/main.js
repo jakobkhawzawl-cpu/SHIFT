@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
+import { ShiftNetwork } from './network.js';
 
 const app=document.querySelector('#app');
 app.innerHTML=`
@@ -11,7 +12,7 @@ app.innerHTML=`
 <button class="style active" data-style="NEON CYBER"><b>01 // NEON CYBER</b><span>Balanced / Pulse blade</span></button>
 <button class="style" data-style="HEAVY GUARDIAN"><b>02 // HEAVY GUARDIAN</b><span>Heavy armor / Shock hammer</span></button>
 <button class="style" data-style="SHIFT RUNNER"><b>03 // SHIFT RUNNER</b><span>Speed / Dual blades</span></button>
-<button class="style" data-style="ENERGY WARRIOR"><b>04 // ENERGY WARRIOR</b><span>Power / Plasma staff</span></button></div><button id="enter" class="cta full">ENTER 3D ARENA <span>→</span></button></div><div class="preview"><div class="label">REAL 3D CHARACTER // <b id="styleLabel">NEON CYBER</b></div><div id="forge3d"></div><div class="hint">DRAG TO ROTATE</div></div></div></section>
+<button class="style" data-style="ENERGY WARRIOR"><b>04 // ENERGY WARRIOR</b><span>Power / Plasma staff</span></button></div><div class="online-panel"><b>ONLINE BATTLE</b><div class="online-actions"><button id="hostBattle" class="small">CREATE ROOM</button><button id="joinBattle" class="small">JOIN ROOM</button></div><input id="joinCode" maxlength="8" placeholder="ROOM CODE" class="room-input hidden"><div id="roomCode" class="room-code hidden"></div></div><button id="enter" class="cta full">ENTER 3D ARENA <span>→</span></button></div><div class="preview"><div class="label">REAL 3D CHARACTER // <b id="styleLabel">NEON CYBER</b></div><div id="forge3d"></div><div class="hint">DRAG TO ROTATE</div></div></div></section>
 <section id="game" class="screen"><div id="game3d"></div><div class="hud"><div class="identity"><div id="hudPhoto"></div><div><b id="hudName">PLAYER</b><span id="hudStyle">NEON CYBER</span></div></div><div class="bar"><span>VITALS</span><i><b id="hp"></b></i></div><div class="score"><span>SECTOR 07</span><b id="score">0000</b></div></div><div class="controls"><span>WASD / ARROWS MOVE</span><span>SPACE ATTACK</span><span>SHIFT DASH</span></div><div class="mobile-game-controls">
   <div class="look-zone" id="lookZone"></div>
   <div class="crosshair" id="crosshair">+</div>
@@ -25,7 +26,7 @@ app.innerHTML=`
 </div>`;
 
 const $=id=>document.getElementById(id);
-let name='PLAYER',style='NEON CYBER',photo='',stream=null,game=null;
+let name='PLAYER',style='NEON CYBER',photo='',stream=null,game=null,network=null,onlineMode=false;
 const MODEL_URLS=[
   'https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/main/public/assets/vendor/quaternius/night-striker.glb',
   'https://threejs.org/examples/models/gltf/Soldier.glb',
@@ -239,6 +240,9 @@ $('capture').onclick=()=>{const v=$('video');if(!v.videoWidth)return;const c=doc
 $('upload').onchange=e=>{const f=e.target.files?.[0];if(f)setPhoto(URL.createObjectURL(f))};
 function setPhoto(u){photo=u;$('photoState').textContent='IDENTITY REFERENCE LOCKED';stopCamera();setupForge()}
 $('enter').onclick=()=>{name=$('name').value.trim()||'PLAYER';$('topName').textContent=name.toUpperCase();show('game')};
+$('hostBattle').onclick=async()=>{try{network?.close();network=new ShiftNetwork({onRemoteJoin:()=>{$('roomCode').textContent='OPPONENT CONNECTED'},onRemoteState:s=>{if(game?.remotePlayer)game.remotePlayer.position.set(s.x,s.y,s.z);if(game?.remotePlayer)game.remotePlayer.rotation.y=s.r||0},onRemoteLeave:()=>{$('roomCode').textContent='OPPONENT LEFT'}});const r=await network.host();onlineMode=true;$('roomCode').textContent='ROOM: '+r.roomCode;$('roomCode').classList.remove('hidden');}catch(e){$('roomCode').textContent='ONLINE ERROR';$('roomCode').classList.remove('hidden')}};
+$('joinBattle').onclick=()=>{$('joinCode').classList.remove('hidden');$('joinCode').focus()};
+$('joinCode').addEventListener('change',async()=>{try{network?.close();network=new ShiftNetwork({onRemoteJoin:()=>{$('roomCode').textContent='CONNECTED'},onRemoteState:s=>{if(game?.remotePlayer)game.remotePlayer.position.set(s.x,s.y,s.z);if(game?.remotePlayer)game.remotePlayer.rotation.y=s.r||0},onRemoteLeave:()=>{$('roomCode').textContent='OPPONENT LEFT'}});const r=await network.join($('joinCode').value);onlineMode=true;$('roomCode').textContent='CONNECTED: '+r.roomCode;$('roomCode').classList.remove('hidden')}catch(e){$('roomCode').textContent='ROOM NOT FOUND';$('roomCode').classList.remove('hidden')}});
 $('home').onclick=()=>{if(game)game.running=false;show('menu')};
 
 function startGame(){
@@ -254,6 +258,7 @@ function startGame(){
  addCityTower(-22,-20,8,8,11);addCityTower(22,-20,7,9,15);addCityTower(-22,20,9,7,13);addCityTower(22,20,8,8,9);addCityTower(-8,-25,6,6,7);addCityTower(9,25,6,7,10);
  const skyline=mat(0x707780,.5,.45);for(let i=0;i<18;i++){const x=(Math.random()-.5)*90,z=(Math.random()-.5)*90;if(Math.abs(x)<28&&Math.abs(z)<28)continue;const h=5+Math.random()*15;const b=new THREE.Mesh(new THREE.BoxGeometry(4+Math.random()*5,h,4+Math.random()*5),skyline);b.position.set(x,h/2,z);b.castShadow=true;scene.add(b)}
  let player=null,playerData=null;createCharacter().then(h=>{playerData=h;player=h.root;player.position.set(0,0,4);scene.add(player);});
+ let remotePlayer=null,remoteData=null;if(onlineMode){createCharacter().then(h=>{remoteData=h;remotePlayer=h.root;remotePlayer.position.set(0,0,-4);remotePlayer.rotation.y=Math.PI;scene.add(remotePlayer);});}
  const enemies=[];let score=0,hp=100,spawn=.8,last=performance.now(),attackCd=0,dashCd=0,shootCd=0,running=true;const keys={};let sprinting=false,crouching=false,jumpY=0,jumpVelocity=0;
  // Sector 07: handcrafted mobile map layout
  const mapGroup=new THREE.Group(); mapGroup.name='SECTOR_07_MAP';
@@ -325,7 +330,7 @@ function startGame(){
  const resetJoystick=()=>{joyPointer=null;sprinting=false;if(stick)stick.style.transform='translate(0,0)';keys.a=keys.d=keys.w=keys.s=false};
  joystick?.addEventListener('pointerup',resetJoystick);joystick?.addEventListener('pointercancel',resetJoystick);
  const resize=()=>{camera.aspect=innerWidth/(innerHeight-76);camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight-76)};addEventListener('resize',resize);
- game={running:true};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
+ game={running:true,remotePlayer};$('hudName').textContent=name.toUpperCase();$('hudStyle').textContent=style;$('hudPhoto').style.backgroundImage=photo?'url("'+photo+'")':'';$('hp').style.width='100%';$('result').classList.add('hidden');
  const loop=now=>{if(!running||!game?.running)return;const dt=Math.min((now-last)/1000,.04);last=now;if(player){const wasAirborne=jumpY>0.02;jumpVelocity-=14*dt;jumpY=Math.max(0,jumpY+jumpVelocity*dt);if(jumpY===0){jumpVelocity=0;if(wasAirborne)playCharacterAction(playerData,['idle']);}player.position.y=jumpY}const mx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0),mz=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
  if(player&&(mx||mz)){
    const forward=new THREE.Vector3(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
@@ -343,8 +348,8 @@ function startGame(){
    const offset=new THREE.Vector3(Math.sin(cameraYaw)*distance*cy,1.4+distance*sy-(crouching?.32:0),Math.cos(cameraYaw)*distance*cy);
    camera.position.lerp(target.clone().add(offset),.12);camera.lookAt(target);
  }
- renderer.render(scene,camera);if(hp<=0)return finish(false);if(score>=1200)return finish(true);requestAnimationFrame(loop)};
+ if(onlineMode&&network&&player&&network.conn?.open)network.send('state',{state:{x:player.position.x,y:player.position.y,z:player.position.z,r:player.rotation.y}});renderer.render(scene,camera);if(hp<=0)return finish(false);if(score>=1200)return finish(true);requestAnimationFrame(loop)};
  requestAnimationFrame(loop);
  function finish(win){running=false;game.running=false;$('resultTitle').textContent=win?'SECTOR CLEARED':'FIGHTER DOWN';$('resultText').textContent=win?'Score '+score+'. Sector 07 is secure.':'Score '+score+'. Re-enter the arena and try again.';$('result').classList.remove('hidden')}
 }
-$('again').onclick=()=>startGame();$('back').onclick=()=>{if(game)game.running=false;show('menu')};addEventListener('pagehide',stopCamera);
+$('again').onclick=()=>{network?.close();network=null;onlineMode=false;startGame()};$('back').onclick=()=>{if(game)game.running=false;show('menu')};addEventListener('pagehide',stopCamera);
